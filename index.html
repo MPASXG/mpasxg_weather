@@ -117,28 +117,58 @@ body { background: var(--bg); color: var(--text); font-family: var(--sans); font
 const ICAO  = 'LFPB';
 const LAT   = 48.969;
 const LON   = 2.441;
-const PROXY = 'https://corsproxy.io/?';
+// Utilisation d'un proxy plus performant ou accès direct si possible
+const PROXY = 'https://api.allorigins.win/get?url=';
 let chart   = null;
 
 function status(msg, state) {
   const el = document.getElementById('status');
   if (state === 'loading') el.innerHTML = '<div class="spin"></div><span>' + msg + '</span>';
   else if (state === 'ok')  el.innerHTML = '<div class="dot dot-ok"></div><span>' + msg + '</span>';
-  else                       el.innerHTML = '<div class="dot dot-err"></div><span>' + msg + '</span>';
+  else                      el.innerHTML = '<div class="dot dot-err"></div><span>' + msg + '</span>';
 }
 
 async function safeFetch(url) {
-  // On utilise directement un proxy CORS pour éviter la 403
-  const proxyUrl = 'https://api.allorigins.win/get?url=' + encodeURIComponent(url);
+  // On tente d'abord en direct (certains navigateurs l'acceptent selon les headers)
   try {
-    const response = await fetch(proxyUrl);
-    if (!response.ok) throw new Error('Erreur Proxy');
-    const data = await response.json();
-    // AllOrigins renvoie les données dans un champ "contents" sous forme de texte
-    return JSON.parse(data.contents);
+    const direct = await fetch(url, { method: 'GET' });
+    if (direct.ok) return await direct.json();
   } catch (e) {
-    console.error("Erreur de récupération:", e);
-    throw e;
+    console.log("Direct fetch bloqué, passage par proxy...");
+  }
+
+  // Si direct échoue, on passe par AllOrigins
+  const res = await fetch(PROXY + encodeURIComponent(url));
+  if (!res.ok) throw new Error('Erreur Proxy ' + res.status);
+  const data = await res.json();
+  
+  // AllOrigins renvoie le JSON dans une chaîne de caractères "contents"
+  if (typeof data.contents === 'string') {
+    return JSON.parse(data.contents);
+  }
+  return data.contents;
+}
+
+async function loadAll() {
+  status('Connexion aux serveurs NOAA...', 'loading');
+  try {
+    // On récupère les données
+    const [metarData, tafData, fcData] = await Promise.all([
+      safeFetch('https://aviationweather.gov/api/data/metar?ids=' + ICAO + '&format=json&hoursBeforeNow=6'),
+      safeFetch('https://aviationweather.gov/api/data/taf?ids=' + ICAO + '&format=json'),
+      // Open-Meteo est plus tolérant sur le CORS, on l'appelle normalement
+      fetch('https://api.open-meteo.com/v1/forecast?latitude=' + LAT + '&longitude=' + LON + '&hourly=temperature_2m&timezone=UTC&forecast_days=1').then(r => r.json())
+    ]);
+
+    renderMetar(metarData);
+    renderTaf(tafData);
+    renderChart(metarData, fcData);
+
+    const latest = metarData.length ? metarData[0] : null;
+    status('Opérationnel · MAJ: ' + new Date().toLocaleTimeString(), 'ok');
+  } catch(e) {
+    console.error(e);
+    status('Erreur: ' + e.message, 'err');
   }
 }
 
