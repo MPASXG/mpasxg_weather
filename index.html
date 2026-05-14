@@ -1,112 +1,105 @@
-{\rtf1\ansi\ansicpg1252\cocoartf2820
-\cocoatextscaling0\cocoaplatform0{\fonttbl\f0\fswiss\fcharset0 Helvetica;}
-{\colortbl;\red255\green255\blue255;}
-{\*\expandedcolortbl;;}
-\paperw11900\paperh16840\margl1440\margr1440\vieww11520\viewh8400\viewkind0
-\pard\tx566\tx1133\tx1700\tx2267\tx2834\tx3401\tx3968\tx4535\tx5102\tx5669\tx6236\tx6803\pardirnatural\partightenfactor0
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Météo Paris-Le Bourget (LFPB)</title>
+    <style>
+        body { font-family: sans-serif; background: #f4f4f9; padding: 20px; color: #333; }
+        h1, h2 { color: #2c3e50; }
+        .container { max-width: 900px; margin: auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        table { width: 100%; border-collapse: collapse; margin-bottom: 30px; }
+        th, td { border: 1px solid #ddd; padding: 12px; text-align: left; }
+        th { background-color: #3498db; color: white; }
+        tr:nth-child(even) { background-color: #f2f2f2; }
+        .metar-raw { font-family: monospace; font-size: 0.9em; color: #666; }
+    </style>
+</head>
+<body>
 
-\f0\fs24 \cf0 <!DOCTYPE html>\
-<html lang="fr">\
-<head>\
-    <meta charset="UTF-8">\
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">\
-    <title>M\'e9t\'e9o Paris-Le Bourget (LFPB)</title>\
-    <style>\
-        body \{ font-family: sans-serif; background: #f4f4f9; padding: 20px; color: #333; \}\
-        h1, h2 \{ color: #2c3e50; \}\
-        .container \{ max-width: 900px; margin: auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); \}\
-        table \{ width: 100%; border-collapse: collapse; margin-bottom: 30px; \}\
-        th, td \{ border: 1px solid #ddd; padding: 12px; text-align: left; \}\
-        th \{ background-color: #3498db; color: white; \}\
-        tr:nth-child(even) \{ background-color: #f2f2f2; \}\
-        .metar-raw \{ font-family: monospace; font-size: 0.9em; color: #666; \}\
-    </style>\
-</head>\
-<body>\
-\
-<div class="container">\
-    <h1>Station LFPB - Paris Le Bourget</h1>\
-    \
-    <h2>Historique (Derni\'e8res 6 heures)</h2>\
-    <table id="historyTable">\
-        <thead>\
-            <tr>\
-                <th>Heure (UTC)</th>\
-                <th>Temp.</th>\
-                <th>Vent</th>\
-                <th>METAR</th>\
-            </tr>\
-        </thead>\
-        <tbody>\
-            <tr><td colspan="4">Chargement de l'historique...</td></tr>\
-        </tbody>\
-    </table>\
-\
-    <h2>Pr\'e9visions (TAF - 5 prochaines heures)</h2>\
-    <table id="forecastTable">\
-        <thead>\
-            <tr>\
-                <th>Heure (UTC)</th>\
-                <th>Pr\'e9vision</th>\
-            </tr>\
-        </thead>\
-        <tbody>\
-            <tr><td colspan="2">Chargement des pr\'e9visions...</td></tr>\
-        </tbody>\
-    </table>\
-</div>\
-\
-<script>\
-    const ICAO = "LFPB";\
-\
-    async function fetchData() \{\
-        try \{\
-            // 1. R\'e9cup\'e9ration de l'historique (METAR)\
-            const metarResponse = await fetch(`https://aviationweather.gov/api/data/metar?ids=$\{ICAO\}&format=json&hoursBeforeNow=6`);\
-            const metarData = await metarResponse.json();\
-            \
-            const historyBody = document.querySelector("#historyTable tbody");\
-            historyBody.innerHTML = "";\
-            \
-            metarData.forEach(obs => \{\
-                const row = `<tr>\
-                    <td>$\{new Date(obs.reportTime).toLocaleTimeString([], \{hour: '2-digit', minute:'2-digit'\})\}</td>\
-                    <td>$\{obs.temp\}\'b0C</td>\
-                    <td>$\{obs.wdir\}\'b0 @ $\{obs.wspd\}kt</td>\
-                    <td class="metar-raw">$\{obs.rawOb\}</td>\
-                </tr>`;\
-                historyBody.innerHTML += row;\
-            \});\
-\
-            // 2. R\'e9cup\'e9ration des pr\'e9visions (TAF)\
-            const tafResponse = await fetch(`https://aviationweather.gov/api/data/taf?ids=$\{ICAO\}&format=json`);\
-            const tafData = await tafResponse.json();\
-            \
-            const forecastBody = document.querySelector("#forecastTable tbody");\
-            forecastBody.innerHTML = "";\
-\
-            if (tafData.length > 0 && tafData[0].forecast) \{\
-                // On prend les 5 premi\'e8res lignes de pr\'e9visions temporelles du TAF\
-                const forecasts = tafData[0].forecast.slice(0, 5);\
-                forecasts.forEach(f => \{\
-                    const row = `<tr>\
-                        <td>\'c0 partir de $\{new Date(f.fcstFrom).toLocaleTimeString([], \{hour: '2-digit', minute:'2-digit'\})\}</td>\
-                        <td class="metar-raw">$\{f.rawFcst || "D\'e9tails disponibles dans le TAF complet"\}</td>\
-                    </tr>`;\
-                    forecastBody.innerHTML += row;\
-                \});\
-            \} else \{\
-                forecastBody.innerHTML = "<tr><td colspan='2'>Aucune pr\'e9vision disponible</td></tr>";\
-            \}\
-\
-        \} catch (error) \{\
-            console.error("Erreur:", error);\
-            alert("Erreur lors de la r\'e9cup\'e9ration des donn\'e9es.");\
-        \}\
-    \}\
-\
-    fetchData();\
-</script>\
-\
-</body>\
-</html>}
+<div class="container">
+    <h1>Station LFPB - Paris Le Bourget</h1>
+    
+    <h2>Historique (Dernières 6 heures)</h2>
+    <table id="historyTable">
+        <thead>
+            <tr>
+                <th>Heure (UTC)</th>
+                <th>Temp.</th>
+                <th>Vent</th>
+                <th>METAR</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr><td colspan="4">Chargement de l'historique...</td></tr>
+        </tbody>
+    </table>
+
+    <h2>Prévisions (TAF - 5 prochaines heures)</h2>
+    <table id="forecastTable">
+        <thead>
+            <tr>
+                <th>Heure (UTC)</th>
+                <th>Prévision</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr><td colspan="2">Chargement des prévisions...</td></tr>
+        </tbody>
+    </table>
+</div>
+
+<script>
+    const ICAO = "LFPB";
+
+    async function fetchData() {
+        try {
+            // 1. Récupération de l'historique (METAR)
+            const metarResponse = await fetch(`https://aviationweather.gov/api/data/metar?ids=${ICAO}&format=json&hoursBeforeNow=6`);
+            const metarData = await metarResponse.json();
+            
+            const historyBody = document.querySelector("#historyTable tbody");
+            historyBody.innerHTML = "";
+            
+            metarData.forEach(obs => {
+                const row = `<tr>
+                    <td>${new Date(obs.reportTime).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</td>
+                    <td>${obs.temp}°C</td>
+                    <td>${obs.wdir}° @ ${obs.wspd}kt</td>
+                    <td class="metar-raw">${obs.rawOb}</td>
+                </tr>`;
+                historyBody.innerHTML += row;
+            });
+
+            // 2. Récupération des prévisions (TAF)
+            const tafResponse = await fetch(`https://aviationweather.gov/api/data/taf?ids=${ICAO}&format=json`);
+            const tafData = await tafResponse.json();
+            
+            const forecastBody = document.querySelector("#forecastTable tbody");
+            forecastBody.innerHTML = "";
+
+            if (tafData.length > 0 && tafData[0].forecast) {
+                // On prend les 5 premières lignes de prévisions temporelles du TAF
+                const forecasts = tafData[0].forecast.slice(0, 5);
+                forecasts.forEach(f => {
+                    const row = `<tr>
+                        <td>À partir de ${new Date(f.fcstFrom).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</td>
+                        <td class="metar-raw">${f.rawFcst || "Détails disponibles dans le TAF complet"}</td>
+                    </tr>`;
+                    forecastBody.innerHTML += row;
+                });
+            } else {
+                forecastBody.innerHTML = "<tr><td colspan='2'>Aucune prévision disponible</td></tr>";
+            }
+
+        } catch (error) {
+            console.error("Erreur:", error);
+            alert("Erreur lors de la récupération des données.");
+        }
+    }
+
+    fetchData();
+</script>
+
+</body>
+</html>
