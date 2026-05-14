@@ -117,8 +117,9 @@ body { background: var(--bg); color: var(--text); font-family: var(--sans); font
 const ICAO  = 'LFPB';
 const LAT   = 48.969;
 const LON   = 2.441;
-// Utilisation d'un proxy plus performant ou accès direct si possible
-const PROXY = 'https://api.allorigins.win/get?url=';
+// Changement de proxy pour éviter la 408 (Timeout)
+const PROXY = 'https://corsproxy.io/?';
+
 let chart   = null;
 
 function status(msg, state) {
@@ -129,24 +130,36 @@ function status(msg, state) {
 }
 
 async function safeFetch(url) {
-  // On tente d'abord en direct (certains navigateurs l'acceptent selon les headers)
   try {
-    const direct = await fetch(url, { method: 'GET' });
-    if (direct.ok) return await direct.json();
+    // Tentative via corsproxy.io (plus direct que AllOrigins)
+    const response = await fetch(PROXY + encodeURIComponent(url));
+    if (!response.ok) throw new Error('Erreur ' + response.status);
+    return await response.json();
   } catch (e) {
-    console.log("Direct fetch bloqué, passage par proxy...");
+    console.error("Erreur de récupération:", e);
+    throw e;
   }
+}
 
-  // Si direct échoue, on passe par AllOrigins
-  const res = await fetch(PROXY + encodeURIComponent(url));
-  if (!res.ok) throw new Error('Erreur Proxy ' + res.status);
-  const data = await res.json();
-  
-  // AllOrigins renvoie le JSON dans une chaîne de caractères "contents"
-  if (typeof data.contents === 'string') {
-    return JSON.parse(data.contents);
+async function loadAll() {
+  status('Connexion aux serveurs NOAA...', 'loading');
+  try {
+    const [metarData, tafData, fcData] = await Promise.all([
+      safeFetch('https://aviationweather.gov/api/data/metar?ids=' + ICAO + '&format=json&hoursBeforeNow=6'),
+      safeFetch('https://aviationweather.gov/api/data/taf?ids=' + ICAO + '&format=json'),
+      fetch('https://api.open-meteo.com/v1/forecast?latitude=' + LAT + '&longitude=' + LON + '&hourly=temperature_2m&timezone=UTC&forecast_days=1').then(r => r.json())
+    ]);
+
+    if (metarData) renderMetar(metarData);
+    if (tafData) renderTaf(tafData);
+    if (fcData) renderChart(metarData, fcData);
+
+    const ts = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+    status('Opérationnel · MAJ à ' + ts + 'Z', 'ok');
+  } catch(e) {
+    status('Erreur : ' + e.message + ' (Serveur saturé)', 'err');
+    document.getElementById('rawBox').textContent = 'Le serveur météo met trop de temps à répondre. Réessaye dans 1 minute.';
   }
-  return data.contents;
 }
 
 async function loadAll() {
