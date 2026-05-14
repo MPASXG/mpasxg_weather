@@ -128,13 +128,18 @@ function status(msg, state) {
 }
 
 async function safeFetch(url) {
+  // On utilise directement un proxy CORS pour éviter la 403
+  const proxyUrl = 'https://api.allorigins.win/get?url=' + encodeURIComponent(url);
   try {
-    const r = await fetch(url, { signal: AbortSignal.timeout(6000) });
-    if (r.ok) return r.json();
-  } catch(_) {}
-  const r2 = await fetch(PROXY + encodeURIComponent(url), { signal: AbortSignal.timeout(8000) });
-  if (!r2.ok) throw new Error('HTTP ' + r2.status);
-  return r2.json();
+    const response = await fetch(proxyUrl);
+    if (!response.ok) throw new Error('Erreur Proxy');
+    const data = await response.json();
+    // AllOrigins renvoie les données dans un champ "contents" sous forme de texte
+    return JSON.parse(data.contents);
+  } catch (e) {
+    console.error("Erreur de récupération:", e);
+    throw e;
+  }
 }
 
 async function loadAll() {
