@@ -1,113 +1,301 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>LFPB - Météo Temps Réel</title>
-    <style>
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #1a1a2e; color: #e0e0e0; padding: 20px; }
-        .container { max-width: 1000px; margin: auto; background: #16213e; padding: 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.5); border: 1px solid #0f3460; }
-        h1 { color: #4cc9f0; border-bottom: 2px solid #4cc9f0; padding-bottom: 10px; margin-top: 0; }
-        h2 { color: #4cc9f0; font-size: 1.2em; margin-top: 30px; }
-        table { width: 100%; border-collapse: collapse; margin-top: 10px; background: #0f3460; }
-        th, td { padding: 12px; border: 1px solid #1a1a2e; text-align: left; }
-        th { background: #4cc9f0; color: #1a1a2e; text-transform: uppercase; font-size: 0.85em; }
-        tr:nth-child(even) { background: #162447; }
-        .metar-raw { font-family: 'Courier New', Courier, monospace; font-size: 0.9em; color: #a2d2ff; word-break: break-all; }
-        .loading { color: #f72585; font-style: italic; }
-        .badge { background: #4cc9f0; color: #1a1a2e; padding: 2px 6px; border-radius: 4px; font-weight: bold; font-size: 0.8em; }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LFPB · Météo Le Bourget</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+:root {
+  --bg: #0b0c10;
+  --bg2: #13151c;
+  --bg3: #1a1d28;
+  --b: rgba(255,255,255,0.07);
+  --text: #dde1f0;
+  --muted: #6b7080;
+  --acc: #4f8ef7;
+  --gold: #f7c84f;
+  --green: #3fcf82;
+  --red: #f76565;
+  --r: 10px;
+  --mono: 'JetBrains Mono','Courier New',monospace;
+  --sans: 'Segoe UI',system-ui,sans-serif;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { background: var(--bg); color: var(--text); font-family: var(--sans); font-size: 14px; padding: 28px 20px; min-height: 100vh; }
+.wrap { max-width: 960px; margin: auto; }
+.header { display: flex; align-items: baseline; gap: 14px; margin-bottom: 6px; }
+.header h1 { font-size: 26px; font-weight: 700; letter-spacing: -0.5px; }
+.icao-badge { background: var(--acc); color: #fff; border-radius: 6px; font-size: 12px; font-weight: 700; padding: 3px 10px; letter-spacing: 1px; }
+.subhead { color: var(--muted); font-size: 12px; margin-bottom: 24px; }
+.status { display: flex; align-items: center; gap: 8px; font-size: 11px; color: var(--muted); margin-bottom: 20px; min-height: 16px; }
+.dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+.dot-ok { background: var(--green); }
+.dot-err { background: var(--red); }
+.spin { width: 11px; height: 11px; border: 2px solid var(--b); border-top-color: var(--acc); border-radius: 50%; animation: sp .7s linear infinite; flex-shrink: 0; }
+@keyframes sp { to { transform: rotate(360deg); } }
+.cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; margin-bottom: 22px; }
+.card { background: var(--bg2); border: 1px solid var(--b); border-radius: var(--r); padding: 14px 16px; }
+.card-lbl { color: var(--muted); font-size: 10px; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 6px; }
+.card-val { font-size: 24px; font-weight: 700; letter-spacing: -1px; line-height: 1; }
+.card-unit { font-size: 12px; color: var(--muted); margin-left: 2px; font-weight: 400; }
+.card-sub { font-size: 11px; color: var(--muted); margin-top: 5px; }
+.raw-box { background: var(--bg3); border: 1px solid var(--b); border-radius: 8px; color: var(--gold); font-family: var(--mono); font-size: 11px; letter-spacing: .4px; padding: 10px 14px; margin-bottom: 22px; word-break: break-all; line-height: 1.6; }
+.sec { font-size: 10px; letter-spacing: 1.5px; text-transform: uppercase; color: var(--muted); margin-bottom: 10px; margin-top: 22px; }
+.chart-wrap { background: var(--bg2); border: 1px solid var(--b); border-radius: var(--r); padding: 20px; margin-bottom: 14px; }
+.legend { display: flex; gap: 18px; margin-bottom: 12px; font-size: 11px; color: var(--muted); }
+.legend span { display: flex; align-items: center; gap: 5px; }
+.ldot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.tbl-wrap { background: var(--bg2); border: 1px solid var(--b); border-radius: var(--r); overflow: hidden; margin-bottom: 22px; }
+.tbl-wrap table { width: 100%; border-collapse: collapse; }
+.tbl-wrap th { background: var(--bg3); color: var(--muted); font-size: 10px; letter-spacing: 1px; text-transform: uppercase; padding: 10px 14px; text-align: left; border-bottom: 1px solid var(--b); }
+.tbl-wrap td { padding: 9px 14px; border-bottom: 1px solid var(--b); font-size: 12px; vertical-align: middle; }
+.tbl-wrap tr:last-child td { border-bottom: none; }
+.tbl-wrap tr:hover td { background: var(--bg3); }
+.mono { font-family: var(--mono); color: var(--muted); font-size: 10px; }
+.cat { display: inline-block; border-radius: 4px; font-size: 10px; font-weight: 700; padding: 2px 7px; }
+.VFR { background: rgba(63,207,130,.13); color: var(--green); }
+.MVFR { background: rgba(79,142,247,.13); color: var(--acc); }
+.IFR { background: rgba(247,101,101,.13); color: var(--red); }
+.LIFR { background: rgba(200,79,247,.13); color: #cf7ff7; }
+.taf-raw { background: var(--bg3); border: 1px solid var(--b); border-radius: 8px; font-family: var(--mono); font-size: 11px; color: var(--text); padding: 14px 16px; line-height: 1.8; word-break: break-all; }
+.taf-line { margin: 0; }
+.taf-chg { color: var(--acc); font-weight: 700; }
+.taf-cond { color: var(--gold); }
+.btn-refresh { background: transparent; border: 1px solid var(--b); border-radius: 7px; color: var(--muted); cursor: pointer; font-family: var(--sans); font-size: 11px; padding: 6px 14px; transition: all .15s; margin-left: auto; display: block; margin-bottom: 16px; }
+.btn-refresh:hover { border-color: var(--acc); color: var(--acc); }
+.empty { color: var(--muted); text-align: center; padding: 30px; font-size: 12px; }
+</style>
 </head>
 <body>
+<div class="wrap">
 
-<div class="container">
-    <h1><span class="badge">LFPB</span> Paris - Le Bourget</h1>
-    
-    <h2>Dernières observations (6h)</h2>
-    <table id="historyTable">
-        <thead>
-            <tr>
-                <th style="width: 15%;">Heure (Z)</th>
-                <th style="width: 10%;">Temp.</th>
-                <th style="width: 15%;">Vent</th>
-                <th>Code METAR</th>
-            </tr>
-        </thead>
-        <tbody>
-            <tr><td colspan="4" class="loading">Récupération des données en cours...</td></tr>
-        </tbody>
-    </table>
+  <div class="header">
+    <h1>Paris – Le Bourget</h1>
+    <span class="icao-badge">LFPB</span>
+  </div>
+  <p class="subhead">Données METAR temps réel · Actualisation auto toutes les 10 min</p>
+  <button class="btn-refresh" onclick="loadAll()">↺ Rafraîchir maintenant</button>
+  <div class="status" id="status"><div class="spin"></div><span>Chargement…</span></div>
+  <div class="raw-box" id="rawBox">—</div>
+  <div class="cards" id="cards"></div>
 
-    <h2>Prévisions (TAF)</h2>
-    <table id="forecastTable">
-        <thead>
-            <tr>
-                <th style="width: 15%;">Validité (Z)</th>
-                <th>Conditions prévues</th>
-            </tr>
-        </thead>
-        <tbody>
-            <tr><td colspan="2" class="loading">Attente des prévisions...</td></tr>
-        </tbody>
+  <p class="sec">Température – METAR + Prévisions Open-Meteo</p>
+  <div class="chart-wrap">
+    <div class="legend">
+      <span><span class="ldot" style="background:var(--acc)"></span>METAR observé</span>
+      <span><span class="ldot" style="background:var(--gold)"></span>Prévision</span>
+    </div>
+    <div style="position:relative;height:200px">
+      <canvas id="chart" role="img" aria-label="Courbe température"></canvas>
+    </div>
+  </div>
+
+  <p class="sec">Historique METAR (6h)</p>
+  <div class="tbl-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Heure UTC</th>
+          <th>Temp</th>
+          <th>Rosée</th>
+          <th>Vent</th>
+          <th>Cat</th>
+          <th>Code brut</th>
+        </tr>
+      </thead>
+      <tbody id="metarTbody"><tr><td colspan="6" class="empty">Chargement…</td></tr></tbody>
     </table>
+  </div>
+
+  <p class="sec">TAF – Prévisions aérodrome</p>
+  <div class="taf-raw" id="tafBox">Chargement…</div>
+
 </div>
 
 <script>
-    const ICAO = "LFPB";
+const ICAO  = 'LFPB';
+const LAT   = 48.969;
+const LON   = 2.441;
+const PROXY = 'https://corsproxy.io/?';
+let chart   = null;
 
-    async function updateWeather() {
-        try {
-            // 1. Récupération des METAR (Historique)
-            const metarUrl = `https://aviationweather.gov/api/data/metar?ids=${ICAO}&format=json&hoursBeforeNow=6`;
-            const resMetar = await fetch(metarUrl);
-            if (!resMetar.ok) throw new Error("API Indisponible");
-            const metarData = await resMetar.json();
-            
-            const historyBody = document.querySelector("#historyTable tbody");
-            if (metarData.length > 0) {
-                historyBody.innerHTML = metarData.map(obs => `
-                    <tr>
-                        <td><strong>${obs.reportTime.split('T')[1].substring(0, 5)}Z</strong></td>
-                        <td>${obs.temp}°C</td>
-                        <td>${obs.wdir}° / ${obs.wspd}kt</td>
-                        <td class="metar-raw">${obs.rawOb}</td>
-                    </tr>
-                `).join('');
-            } else {
-                historyBody.innerHTML = "<tr><td colspan='4'>Aucune donnée récente trouvée.</td></tr>";
-            }
+function status(msg, state) {
+  const el = document.getElementById('status');
+  if (state === 'loading') el.innerHTML = '<div class="spin"></div><span>' + msg + '</span>';
+  else if (state === 'ok')  el.innerHTML = '<div class="dot dot-ok"></div><span>' + msg + '</span>';
+  else                       el.innerHTML = '<div class="dot dot-err"></div><span>' + msg + '</span>';
+}
 
-            // 2. Récupération des TAF (Prévisions)
-            const tafUrl = `https://aviationweather.gov/api/data/taf?ids=${ICAO}&format=json`;
-            const resTaf = await fetch(tafUrl);
-            const tafData = await resTaf.json();
-            
-            const forecastBody = document.querySelector("#forecastTable tbody");
-            if (tafData.length > 0 && tafData[0].forecast) {
-                // On prend les 5 prochaines lignes de prévisions
-                forecastBody.innerHTML = tafData[0].forecast.slice(0, 5).map(f => `
-                    <tr>
-                        <td><strong>${f.fcstFrom.split('T')[1].substring(0, 5)}Z</strong></td>
-                        <td class="metar-raw">${f.rawFcst || "Changement de conditions"}</td>
-                    </tr>
-                `).join('');
-            } else {
-                forecastBody.innerHTML = "<tr><td colspan='2'>Pas de TAF disponible pour le moment.</td></tr>";
-            }
+async function safeFetch(url) {
+  try {
+    const r = await fetch(url, { signal: AbortSignal.timeout(6000) });
+    if (r.ok) return r.json();
+  } catch(_) {}
+  const r2 = await fetch(PROXY + encodeURIComponent(url), { signal: AbortSignal.timeout(8000) });
+  if (!r2.ok) throw new Error('HTTP ' + r2.status);
+  return r2.json();
+}
 
-        } catch (error) {
-            console.error("Erreur:", error);
-            document.querySelectorAll("tbody").forEach(tb => {
-                tb.innerHTML = `<tr><td colspan="4" style="color: #f72585;">Erreur de connexion aux données météo.</td></tr>`;
-            });
+async function loadAll() {
+  status('Chargement METAR…', 'loading');
+  try {
+    const [metarData, tafData, fcData] = await Promise.all([
+      safeFetch('https://aviationweather.gov/api/data/metar?ids=' + ICAO + '&format=json&hoursBeforeNow=6&mostRecentForEachStation=false'),
+      safeFetch('https://aviationweather.gov/api/data/taf?ids=' + ICAO + '&format=json'),
+      safeFetch('https://api.open-meteo.com/v1/forecast?latitude=' + LAT + '&longitude=' + LON + '&hourly=temperature_2m,windspeed_10m,weathercode&timezone=UTC&forecast_days=2')
+    ]);
+    renderMetar(metarData);
+    renderTaf(tafData);
+    renderChart(metarData, fcData);
+    const latest = metarData.length ? metarData[metarData.length - 1] : null;
+    const ts = latest ? new Date(latest.reportTime).toISOString().slice(11, 16) + ' UTC' : '';
+    status('Données à jour · dernier relevé ' + ts, 'ok');
+  } catch(e) {
+    status('Erreur de connexion : ' + e.message, 'err');
+    document.getElementById('rawBox').textContent = 'Impossible de charger les données.';
+  }
+}
+
+function renderMetar(data) {
+  if (!data || !data.length) {
+    document.getElementById('cards').innerHTML = '<div class="card"><div class="card-lbl">Info</div><div class="card-val" style="font-size:13px">Aucune donnée</div></div>';
+    document.getElementById('metarTbody').innerHTML = '<tr><td colspan="6" class="empty">Aucun METAR disponible.</td></tr>';
+    return;
+  }
+  const sorted = data.sort((a, b) => a.obsTime - b.obsTime);
+  const l = sorted[sorted.length - 1];
+
+  document.getElementById('rawBox').textContent = l.rawOb || '—';
+
+  const wind = l.wdir != null ? String(l.wdir).padStart(3, '0') + '° / ' + l.wspd + ' kt' : 'Calme';
+  const vis  = l.visib === '6+' ? '+10 km' : l.visib + ' SM';
+  const cat  = l.fltCat || '—';
+  const tCol = l.temp > 35 ? 'var(--red)' : l.temp < 5 ? 'var(--acc)' : 'var(--green)';
+  const clouds = l.cover === 'CAVOK' ? 'CAVOK' : (l.clouds && l.clouds.map(c => c.cover + ' ' + c.base + 'ft').join(' · ') || l.cover || '—');
+
+  document.getElementById('cards').innerHTML =
+    '<div class="card">' +
+      '<div class="card-lbl">Température</div>' +
+      '<div class="card-val" style="color:' + tCol + '">' + (l.temp != null ? l.temp : '—') + '<span class="card-unit">°C</span></div>' +
+      '<div class="card-sub">Rosée : ' + (l.dewp != null ? l.dewp : '—') + '°C</div>' +
+    '</div>' +
+    '<div class="card">' +
+      '<div class="card-lbl">Vent</div>' +
+      '<div class="card-val" style="font-size:15px;padding-top:5px">' + wind + '</div>' +
+      '<div class="card-sub">' + (l.wspd > 20 ? '⚠ Fort' : 'Normal') + '</div>' +
+    '</div>' +
+    '<div class="card">' +
+      '<div class="card-lbl">Visibilité</div>' +
+      '<div class="card-val" style="font-size:15px;padding-top:5px">' + vis + '</div>' +
+      '<div class="card-sub">' + clouds + '</div>' +
+    '</div>' +
+    '<div class="card">' +
+      '<div class="card-lbl">QNH</div>' +
+      '<div class="card-val">' + (l.altim != null ? l.altim : '—') + '<span class="card-unit">hPa</span></div>' +
+      '<div class="card-sub">' + (l.elev != null ? l.elev : '—') + ' m élev.</div>' +
+    '</div>' +
+    '<div class="card">' +
+      '<div class="card-lbl">Catégorie</div>' +
+      '<div class="card-val" style="font-size:15px;padding-top:8px"><span class="cat ' + cat + '">' + cat + '</span></div>' +
+      '<div class="card-sub">Flight category</div>' +
+    '</div>';
+
+  document.getElementById('metarTbody').innerHTML = sorted.slice().reverse().map(function(m) {
+    var t   = new Date(m.reportTime).toISOString().slice(11, 16);
+    var c   = m.fltCat || '—';
+    var w   = m.wdir != null ? String(m.wdir).padStart(3, '0') + '°/' + m.wspd + 'kt' : '—';
+    return '<tr>' +
+      '<td><strong>' + t + 'Z</strong></td>' +
+      '<td>' + (m.temp != null ? m.temp : '—') + '°C</td>' +
+      '<td>' + (m.dewp != null ? m.dewp : '—') + '°C</td>' +
+      '<td>' + w + '</td>' +
+      '<td><span class="cat ' + c + '">' + c + '</span></td>' +
+      '<td class="mono">' + (m.rawOb || '').replace(/^METAR /, '') + '</td>' +
+    '</tr>';
+  }).join('');
+}
+
+function renderTaf(data) {
+  var box = document.getElementById('tafBox');
+  if (!data || !data.length) { box.textContent = 'Pas de TAF disponible.'; return; }
+  var raw = data[0].rawTAF || data[0].rawTaf || '';
+  if (!raw) { box.textContent = 'TAF non disponible.'; return; }
+  var lines = raw.split('\n').map(function(line) {
+    return line
+      .replace(/^(BECMG|TEMPO|FM\d+|PROB\d+)/g, '<span class="taf-chg">$1</span>')
+      .replace(/\b(CAVOK|NSC|SKC|CLR)\b/g, '<span class="taf-cond">$1</span>')
+      .replace(/\b(TS\w*|RA\w*|SN\w*|BR|FG|DZ|GR)\b/g, '<span style="color:var(--red)">$1</span>');
+  });
+  box.innerHTML = lines.map(function(l) { return '<p class="taf-line">' + l + '</p>'; }).join('');
+}
+
+function renderChart(metarData, fc) {
+  var sorted  = (metarData || []).slice().sort(function(a, b) { return a.obsTime - b.obsTime; });
+  var mLabels = sorted.map(function(m) { return new Date(m.reportTime).toISOString().slice(11, 16); });
+  var mTemps  = sorted.map(function(m) { return m.temp; });
+
+  var nowTs  = Date.now();
+  var fi     = fc.hourly.time.map(function(t, i) { return new Date(t + 'Z').getTime() > nowTs ? i : -1; }).filter(function(i) { return i >= 0; }).slice(0, 12);
+  var fLabels = fi.map(function(i) { return fc.hourly.time[i].slice(11, 16); });
+  var fTemps  = fi.map(function(i) { return Math.round(fc.hourly.temperature_2m[i] * 10) / 10; });
+
+  var allLabels = mLabels.concat(fLabels);
+
+  if (chart) chart.destroy();
+  chart = new Chart(document.getElementById('chart'), {
+    type: 'line',
+    data: {
+      labels: allLabels,
+      datasets: [
+        {
+          label: 'METAR',
+          data: mTemps.concat(new Array(fLabels.length).fill(null)),
+          borderColor: '#4f8ef7',
+          backgroundColor: 'rgba(79,142,247,0.07)',
+          pointBackgroundColor: '#4f8ef7',
+          pointRadius: 4,
+          tension: 0.35,
+          fill: true,
+          spanGaps: false
+        },
+        {
+          label: 'Prévision',
+          data: new Array(mLabels.length).fill(null).concat(fTemps),
+          borderColor: '#f7c84f',
+          backgroundColor: 'rgba(247,200,79,0.05)',
+          pointBackgroundColor: '#f7c84f',
+          borderDash: [5, 4],
+          pointRadius: 3,
+          tension: 0.35,
+          fill: true,
+          spanGaps: false
         }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: { mode: 'index', intersect: false }
+      },
+      scales: {
+        x: {
+          ticks: { color: '#6b7080', font: { size: 10 }, maxRotation: 45, autoSkip: true, maxTicksLimit: 14 },
+          grid: { color: 'rgba(255,255,255,0.04)' }
+        },
+        y: {
+          ticks: { color: '#6b7080', font: { size: 10 }, callback: function(v) { return v + '°'; } },
+          grid: { color: 'rgba(255,255,255,0.04)' }
+        }
+      }
     }
+  });
+}
 
-    // Lancer la fonction au chargement
-    updateWeather();
-    // Actualiser automatiquement toutes les 10 minutes
-    setInterval(updateWeather, 600000);
+loadAll();
+setInterval(loadAll, 600000);
 </script>
-
 </body>
 </html>
