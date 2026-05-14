@@ -2,55 +2,65 @@
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <title>METAR LFPB Direct</title>
+    <title>METAR LFPB Officiel</title>
     <style>
-        body { background: #0b0c10; color: #4cc9f0; font-family: monospace; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
-        .box { border: 1px solid #4cc9f0; padding: 30px; border-radius: 10px; background: #13151c; text-align: center; }
-        .temp { font-size: 5rem; display: block; }
-        .raw { font-size: 0.8rem; color: #6b7080; margin-top: 20px; max-width: 400px; }
+        body { background: #0b0c10; color: #4cc9f0; font-family: 'Courier New', monospace; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
+        .box { border: 2px solid #4cc9f0; padding: 40px; border-radius: 15px; background: #13151c; text-align: center; box-shadow: 0 0 20px rgba(76, 201, 240, 0.2); }
+        .temp { font-size: 6rem; font-weight: bold; display: block; margin: 10px 0; }
+        .label { color: #6b7080; font-size: 1.2rem; letter-spacing: 3px; }
+        .raw { font-size: 0.9rem; color: #3fcf82; margin-top: 20px; max-width: 450px; background: rgba(0,0,0,0.3); padding: 10px; border-radius: 5px; }
+        .error { color: #f76565; font-size: 0.8rem; margin-top: 10px; }
     </style>
 </head>
 <body>
 
 <div class="box">
-    <div style="color: #6b7080; margin-bottom: 10px;">LFPB - METAR OFFICIEL</div>
-    <span id="temp" class="temp">--°C</span>
-    <div id="raw" class="raw">Chargement du flux...</div>
+    <div class="label">LE BOURGET / LFPB</div>
+    <span id="temp" class="temp">--°</span>
+    <div id="raw" class="raw">SYNCHRONISATION...</div>
+    <div id="error-msg" class="error"></div>
 </div>
 
 <script>
     async function getMetar() {
-        // Le lien exact que tu veux, mais encapsulé dans un proxy pour éviter la 403
-        const targetUrl = "https://aviationweather.gov/api/data/metar?ids=LFPB&format=json&hoursBeforeNow=2";
-        const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(targetUrl)}`;
+        const icao = "LFPB";
+        // URL officielle
+        const targetUrl = `https://aviationweather.gov/api/data/metar?ids=${icao}&format=json&hoursBeforeNow=2`;
+        
+        // Proxy alternatif (CORSProxy.io est souvent plus stable que AllOrigins)
+        const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(targetUrl)}`;
 
         try {
             const response = await fetch(proxyUrl);
-            if (!response.ok) throw new Error('Erreur de réseau');
+            
+            if (!response.ok) throw new Error(`Erreur serveur (${response.status})`);
             
             const data = await response.json();
-            // AllOrigins renvoie les données dans "contents" sous forme de texte, on le re-transforme en JSON
-            const metarList = JSON.parse(data.contents);
 
-            if (metarList && metarList.length > 0) {
-                // On prend le dernier relevé (index 0 ou le dernier selon l'API)
-                const latest = metarList[0]; 
+            if (data && data.length > 0) {
+                const latest = data[0]; 
                 
-                // Affichage de la température exacte du METAR
-                document.getElementById('temp').innerText = latest.temp + "°C";
+                // On affiche la température (temp)
+                document.getElementById('temp').innerHTML = Math.round(latest.temp) + "°";
                 
-                // Affichage du code METAR brut pour vérification
+                // On affiche le code METAR complet (rawOb)
                 document.getElementById('raw').innerText = latest.rawOb;
+                document.getElementById('error-msg').innerText = "";
+            } else {
+                throw new Error("Pas de METAR disponible pour LFPB");
             }
         } catch (error) {
             console.error(error);
-            document.getElementById('raw').innerText = "Erreur de récupération (CORS/Proxy)";
+            document.getElementById('raw').innerText = "ERREUR DE RÉCEPTION";
+            document.getElementById('error-msg').innerText = "L'API officielle bloque la connexion. Réessaie dans 1 min.";
         }
     }
 
+    // Premier lancement
     getMetar();
-    // Refresh toutes les 10 min
-    setInterval(getMetar, 600000);
+    
+    // Refresh toutes les 5 minutes
+    setInterval(getMetar, 300000);
 </script>
 
 </body>
