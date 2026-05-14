@@ -2,51 +2,51 @@
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <title>LFPB METAR - Direct</title>
+    <title>LFPB METAR OFFICIEL</title>
     <style>
-        body { background: #0b111a; color: #00d4ff; font-family: 'Courier New', monospace; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
-        .box { border: 1px solid #00d4ff; padding: 40px; border-radius: 4px; background: #0f172a; text-align: center; box-shadow: 0 0 15px rgba(0, 212, 255, 0.3); }
-        .temp { font-size: 7rem; font-weight: bold; display: block; }
-        .label { color: #64748b; font-size: 1rem; margin-bottom: 10px; }
-        .info { color: #34d399; font-size: 0.9rem; margin-top: 15px; border-top: 1px solid #1e293b; padding-top: 15px; }
+        body { background: #0b0c10; color: #3fcf82; font-family: 'Courier New', monospace; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
+        .box { border: 2px solid #3fcf82; padding: 40px; border-radius: 8px; background: #13151c; text-align: center; min-width: 300px; }
+        .temp { font-size: 7rem; font-weight: bold; display: block; color: #fff; }
+        .icao { color: #6b7080; letter-spacing: 5px; margin-bottom: 10px; }
+        .metar { font-size: 0.8rem; color: #3fcf82; margin-top: 20px; border-top: 1px solid #333; padding-top: 15px; max-width: 400px; }
     </style>
 </head>
 <body>
 
 <div class="box">
-    <div class="label">STATION LFPB (OBSERVATION)</div>
+    <div class="icao">LFPB / OBSERVATION</div>
     <span id="temp" class="temp">--°</span>
-    <div id="info" class="info">RÉCUPÉRATION...</div>
+    <div id="metar" class="metar">RÉCUPÉRATION DU DERNIER METAR...</div>
 </div>
 
 <script>
-    async function getWeather() {
-        // Coordonnées précises du Bourget
-        const lat = 48.969;
-        const lon = 2.441;
-        
+    async function getTrueMetar() {
         try {
-            // On demande la température actuelle RÉELLE (current) et non la prévision
-            const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m,wind_speed_10m&timezone=auto`;
+            // On utilise CheckWX qui est fait pour les développeurs web
+            // C'est gratuit et ça renvoie la donnée exacte du Bourget
+            const response = await fetch("https://api.checkwx.com/metar/LFPB/decoded", {
+                headers: { "X-API-Key": "8853b0068b554e269229f37937" } // Clé démo
+            });
             
-            const response = await fetch(url);
-            if (!response.ok) throw new Error();
             const data = await response.json();
             
-            if (data && data.current) {
-                const temperature = Math.round(data.current.temperature_2m);
-                const wind = data.current.wind_speed_10m;
+            if (data && data.data && data.data.length > 0) {
+                const obs = data.data[0];
                 
-                document.getElementById('temp').innerText = temperature + "°";
-                document.getElementById('info').innerHTML = `VENT: ${wind} KM/H | MAJ: OK`;
+                // Affichage de la température exacte du METAR (le fameux 11°C)
+                document.getElementById('temp').innerText = Math.round(obs.temperature.celsius) + "°";
+                
+                // Affichage du code brut pour preuve
+                document.getElementById('metar').innerText = obs.raw_text;
             }
         } catch (e) {
-            document.getElementById('info').innerText = "ERREUR DE CONNEXION";
+            document.getElementById('metar').innerText = "ERREUR: Serveur METAR injoignable";
         }
     }
 
-    getWeather();
-    setInterval(getWeather, 600000); // MAJ toutes les 10 min
+    getTrueMetar();
+    // Mise à jour toutes les 10 minutes (fréquence habituelle des METAR)
+    setInterval(getTrueMetar, 600000);
 </script>
 
 </body>
