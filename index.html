@@ -2,179 +2,58 @@
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>LFPB · Météo Le Bourget</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+    <title>Température LFPB</title>
     <style>
-        :root {
-            --bg: #0b0c10; --bg2: #13151c; --bg3: #1a1d28; --b: rgba(255,255,255,0.07);
-            --text: #dde1f0; --muted: #6b7080; --acc: #4f8ef7; --gold: #f7c84f;
-            --green: #3fcf82; --red: #f76565; --r: 10px;
-            --mono: 'JetBrains Mono','Courier New',monospace; --sans: 'Segoe UI',system-ui,sans-serif;
-        }
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { background: var(--bg); color: var(--text); font-family: var(--sans); font-size: 14px; padding: 28px 20px; min-height: 100vh; }
-        .wrap { max-width: 960px; margin: auto; }
-        .header { display: flex; align-items: baseline; gap: 14px; margin-bottom: 6px; }
-        .header h1 { font-size: 26px; font-weight: 700; letter-spacing: -0.5px; }
-        .icao-badge { background: var(--acc); color: #fff; border-radius: 6px; font-size: 12px; font-weight: 700; padding: 3px 10px; letter-spacing: 1px; }
-        .subhead { color: var(--muted); font-size: 12px; margin-bottom: 24px; }
-        .status { display: flex; align-items: center; gap: 8px; font-size: 11px; color: var(--muted); margin-bottom: 20px; min-height: 16px; }
-        .dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
-        .dot-ok { background: var(--green); }
-        .dot-err { background: var(--red); }
-        .spin { width: 11px; height: 11px; border: 2px solid var(--b); border-top-color: var(--acc); border-radius: 50%; animation: sp .7s linear infinite; flex-shrink: 0; }
-        @keyframes sp { to { transform: rotate(360deg); } }
-        .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; margin-bottom: 22px; }
-        .card { background: var(--bg2); border: 1px solid var(--b); border-radius: var(--r); padding: 14px 16px; }
-        .card-lbl { color: var(--muted); font-size: 10px; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 6px; }
-        .card-val { font-size: 24px; font-weight: 700; letter-spacing: -1px; line-height: 1; }
-        .card-unit { font-size: 12px; color: var(--muted); margin-left: 2px; font-weight: 400; }
-        .card-sub { font-size: 11px; color: var(--muted); margin-top: 5px; }
-        .raw-box { background: var(--bg3); border: 1px solid var(--b); border-radius: 8px; color: var(--gold); font-family: var(--mono); font-size: 11px; letter-spacing: .4px; padding: 10px 14px; margin-bottom: 22px; word-break: break-all; line-height: 1.6; }
-        .sec { font-size: 10px; letter-spacing: 1.5px; text-transform: uppercase; color: var(--muted); margin-bottom: 10px; margin-top: 22px; }
-        .chart-wrap { background: var(--bg2); border: 1px solid var(--b); border-radius: var(--r); padding: 20px; margin-bottom: 14px; }
-        .tbl-wrap { background: var(--bg2); border: 1px solid var(--b); border-radius: var(--r); overflow: hidden; margin-bottom: 22px; }
-        .tbl-wrap table { width: 100%; border-collapse: collapse; }
-        .tbl-wrap th { background: var(--bg3); color: var(--muted); font-size: 10px; letter-spacing: 1px; text-transform: uppercase; padding: 10px 14px; text-align: left; border-bottom: 1px solid var(--b); }
-        .tbl-wrap td { padding: 9px 14px; border-bottom: 1px solid var(--b); font-size: 12px; }
-        .mono { font-family: var(--mono); color: var(--muted); font-size: 10px; }
-        .cat { display: inline-block; border-radius: 4px; font-size: 10px; font-weight: 700; padding: 2px 7px; }
-        .VFR { background: rgba(63,207,130,.13); color: var(--green); }
-        .MVFR { background: rgba(79,142,247,.13); color: var(--acc); }
-        .IFR { background: rgba(247,101,101,.13); color: var(--red); }
-        .taf-raw { background: var(--bg3); border: 1px solid var(--b); border-radius: 8px; font-family: var(--mono); font-size: 11px; color: var(--text); padding: 14px 16px; line-height: 1.8; word-break: break-all; }
-        .btn-refresh { background: transparent; border: 1px solid var(--b); border-radius: 7px; color: var(--muted); cursor: pointer; font-size: 11px; padding: 6px 14px; margin-left: auto; display: block; margin-bottom: 16px; }
+        body { background: #0b0c10; color: #4f8ef7; font-family: sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
+        .temp-display { text-align: center; border: 2px solid #1f2833; padding: 40px; border-radius: 20px; background: #13151c; }
+        h1 { font-size: 1.2rem; color: #6b7080; text-transform: uppercase; margin-bottom: 10px; }
+        .value { font-size: 5rem; font-weight: bold; }
+        .unit { font-size: 2rem; color: #6b7080; }
     </style>
 </head>
 <body>
-<div class="wrap">
-    <div class="header">
-        <h1>Paris – Le Bourget</h1>
-        <span class="icao-badge">LFPB</span>
-    </div>
-    <p class="subhead">Données METAR temps réel · Historique 6h</p>
-    <button class="btn-refresh" onclick="loadAll()">↺ Rafraîchir</button>
-    <div class="status" id="status"><div class="spin"></div><span>Initialisation...</span></div>
-    <div class="raw-box" id="rawBox">—</div>
-    <div class="cards" id="cards"></div>
 
-    <p class="sec">Température (Observations vs Prévisions)</p>
-    <div class="chart-wrap"><div style="position:relative;height:200px"><canvas id="chart"></canvas></div></div>
-
-    <p class="sec">Historique METAR (6h)</p>
-    <div class="tbl-wrap">
-        <table>
-            <thead><tr><th>Heure UTC</th><th>Temp</th><th>Vent</th><th>Cat</th><th>Code</th></tr></thead>
-            <tbody id="metarTbody"></tbody>
-        </table>
-    </div>
-
-    <p class="sec">TAF – Prévisions aérodrome</p>
-    <div class="taf-raw" id="tafBox">Chargement...</div>
+<div class="temp-display">
+    <h1>Paris Le Bourget (LFPB)</h1>
+    <div id="temp" class="value">--</div>
+    <div id="time" style="color: #6b7080; margin-top: 10px;">Chargement...</div>
 </div>
 
 <script>
-const ICAO = 'LFPB';
-const LAT = 48.969; const LON = 2.441;
-let chart = null;
-
-function status(msg, state) {
-    const el = document.getElementById('status');
-    if (state === 'loading') el.innerHTML = '<div class="spin"></div><span>' + msg + '</span>';
-    else if (state === 'ok') el.innerHTML = '<div class="dot dot-ok"></div><span>' + msg + '</span>';
-    else el.innerHTML = '<div class="dot dot-err"></div><span>' + msg + '</span>';
-}
-
-// FONCTION DE RÉCUPÉRATION ROBUSTE
-async function safeFetch(url) {
-    try {
-        const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`;
-        const res = await fetch(proxyUrl);
-        if (!res.ok) throw new Error('Erreur Proxy');
-        const data = await res.json();
-        return JSON.parse(data.contents);
-    } catch (e) {
-        console.error("Erreur safeFetch:", e);
-        throw e;
+    async function getTemperature() {
+        const icao = "LFPB";
+        const url = `https://aviationweather.gov/api/data/metar?ids=${icao}&format=json&hoursBeforeNow=2`;
+        
+        try {
+            // Utilisation d'un proxy pour éviter l'erreur 403/CORS sur Netlify
+            const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`;
+            const response = await fetch(proxyUrl);
+            const data = await response.json();
+            
+            // Le contenu est envoyé sous forme de chaîne de caractères dans "contents"
+            const metarArray = JSON.parse(data.contents);
+            
+            if (metarArray && metarArray.length > 0) {
+                // On récupère le dernier relevé (le plus récent)
+                const latest = metarArray[metarArray.length - 1];
+                
+                document.getElementById('temp').innerHTML = `${latest.temp}<span class="unit">°C</span>`;
+                document.getElementById('time').innerText = `Relevé de ${latest.reportTime.split('T')[1].substring(0, 5)}Z`;
+            } else {
+                document.getElementById('temp').innerText = "??";
+                document.getElementById('time').innerText = "Aucune donnée disponible";
+            }
+        } catch (error) {
+            console.error("Erreur:", error);
+            document.getElementById('temp').innerText = "Err";
+            document.getElementById('time').innerText = "Erreur de connexion";
+        }
     }
-}
 
-async function loadAll() {
-    status('Récupération NOAA...', 'loading');
-    try {
-        const [metarData, tafData, fcData] = await Promise.all([
-            safeFetch(`https://aviationweather.gov/api/data/metar?ids=${ICAO}&format=json&hoursBeforeNow=6`),
-            safeFetch(`https://aviationweather.gov/api/data/taf?ids=${ICAO}&format=json`),
-            fetch(`https://api.open-meteo.com/v1/forecast?latitude=${LAT}&longitude=${LON}&hourly=temperature_2m&timezone=UTC&forecast_days=1`).then(r => r.json())
-        ]);
-
-        renderMetar(metarData);
-        renderTaf(tafData);
-        renderChart(metarData, fcData);
-        status('Données à jour : ' + new Date().toLocaleTimeString(), 'ok');
-    } catch(e) {
-        status('Erreur de connexion', 'err');
-    }
-}
-
-function renderMetar(data) {
-    if (!data || !data.length) return;
-    const sorted = data.sort((a, b) => a.obsTime - b.obsTime);
-    const l = sorted[sorted.length - 1];
-    document.getElementById('rawBox').textContent = l.rawOb || '—';
-
-    document.getElementById('cards').innerHTML = `
-        <div class="card"><div class="card-lbl">Temp</div><div class="card-val">${l.temp}°C</div></div>
-        <div class="card"><div class="card-lbl">Vent</div><div class="card-val" style="font-size:16px">${l.wdir}° / ${l.wspd}kt</div></div>
-        <div class="card"><div class="card-lbl">QNH</div><div class="card-val">${l.altim}</div></div>
-        <div class="card"><div class="card-lbl">Catégorie</div><div class="card-val"><span class="cat ${l.fltCat}">${l.fltCat}</span></div></div>
-    `;
-
-    document.getElementById('metarTbody').innerHTML = sorted.slice().reverse().map(m => `
-        <tr>
-            <td><strong>${m.reportTime.split('T')[1].substring(0,5)}Z</strong></td>
-            <td>${m.temp}°C</td>
-            <td>${m.wdir}°/${m.wspd}kt</td>
-            <td><span class="cat ${m.fltCat}">${m.fltCat}</span></td>
-            <td class="mono">${m.rawOb}</td>
-        </tr>
-    `).join('');
-}
-
-function renderTaf(data) {
-    const box = document.getElementById('tafBox');
-    if (data && data[0]) {
-        box.innerHTML = data[0].rawTAF.split('\n').join('<br>');
-    } else {
-        box.textContent = "TAF indisponible";
-    }
-}
-
-function renderChart(metarData, fc) {
-    const ctx = document.getElementById('chart').getContext('2d');
-    const mLabels = metarData.map(m => m.reportTime.split('T')[1].substring(0,5));
-    const mTemps = metarData.map(m => m.temp);
-    
-    if (chart) chart.destroy();
-    chart = new Chart(ctx, {
-        type: 'line',
-        data: {
-            labels: mLabels,
-            datasets: [{
-                label: 'Température (°C)',
-                data: mTemps,
-                borderColor: '#4f8ef7',
-                tension: 0.3,
-                fill: false
-            }]
-        },
-        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
-    });
-}
-
-loadAll();
-setInterval(loadAll, 600000);
+    getTemperature();
+    // Actualise toutes les 5 minutes
+    setInterval(getTemperature, 300000);
 </script>
+
 </body>
 </html>
